@@ -19,6 +19,7 @@ import { DocumentPreview } from './document-preview';
 import { MessageReasoning } from './message-reasoning';
 import { UseChatHelpers } from '@ai-sdk/react';
 import { Loader2 } from "lucide-react";
+import Image from 'next/image';
 
 const PurePreviewMessage = ({
   chatId,
@@ -161,7 +162,12 @@ const PurePreviewMessage = ({
                       //   skeleton: ['getLegalExpertInfo'].includes(toolName),
                       // })}
                     >
-                      {toolName === 'getLegalExpertInfo' ? (
+                      {toolName === 'getRandomPic' ? (
+                        <div className="flex">
+                          <p className="text-base text-gray-500">Obteniendo la imagen...</p>
+                          <Loader2 className="animate-spin text-gray-500 mt-1 mx-2" size={14}/>
+                        </div>
+                      ) : toolName === 'getLegalExpertInfo' ? (
                         <div className="flex">
                           <p className="text-base text-gray-500">Buscando en la fuente de datos...</p>
                           <Loader2 className="animate-spin text-gray-500 mt-1 mx-2" size={14}/>
@@ -184,22 +190,33 @@ const PurePreviewMessage = ({
 
                   return (
                     <div key={toolCallId}>
-                      {toolName === 'getLegalExpertInfo' ? (
-                        <p className="text-base text-gray-500">Obtenido de la fuente de datos</p>
-                      ) : toolName === 'createDocument' ? (
-                        <DocumentPreview
-                          isReadonly={isReadonly}
-                          result={result}
-                        />
-                      ) : toolName === 'updateDocument' ? (
-                        <DocumentToolResult
-                          type="update"
-                          result={result}
-                          isReadonly={isReadonly}
-                        />
-                      ) : (
-                        <pre>{JSON.stringify(result, null, 2)}</pre>
-                      )}
+                      {toolName === 'getRandomPic' ? (
+                          <div className="flex flex-col gap-2">
+                            <Image
+                              src={result as string}
+                              alt="Random pic"
+                              width={600}
+                              height={400}
+                              className="rounded-lg"
+                            />
+                          </div>
+                        ) :
+                        toolName === 'getLegalExpertInfo' ? (
+                          <p className="text-base text-gray-500">Obtenido de la fuente de datos</p>
+                        ) : toolName === 'createDocument' ? (
+                          <DocumentPreview
+                            isReadonly={isReadonly}
+                            result={result}
+                          />
+                        ) : toolName === 'updateDocument' ? (
+                          <DocumentToolResult
+                            type="update"
+                            result={result}
+                            isReadonly={isReadonly}
+                          />
+                        ) : (
+                          <pre>{JSON.stringify(result, null, 2)}</pre>
+                        )}
                     </div>
                   );
                 }
