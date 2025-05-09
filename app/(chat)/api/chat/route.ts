@@ -9,6 +9,7 @@ import { myProvider } from '@/lib/ai/providers';
 import { createDocument } from '@/lib/ai/tools/create-document';
 import { updateDocument } from '@/lib/ai/tools/update-document';
 import { getLegalExpertInfo } from '@/lib/ai/tools/get-legal-expert-info';
+import { getRandomPic } from "@/lib/ai/tools/get-random-pic";
 
 export const maxDuration = 60;
 
@@ -76,6 +77,7 @@ export async function POST(request: Request) {
               selectedChatModel === 'chat-model-reasoning'
                 ? []
                 : [
+                  'getRandomPic',
                   'getLegalExpertInfo',
                   'createDocument',
                   'updateDocument',
@@ -83,6 +85,7 @@ export async function POST(request: Request) {
             experimental_transform: smoothStream({ chunking: 'word' }),
             experimental_generateMessageId: generateUUID,
             tools: {
+              getRandomPic,
               getLegalExpertInfo: getLegalExpertInfo({ dataStream }),
               createDocument: createDocument({ session, dataStream }),
               updateDocument: updateDocument({ session, dataStream }),
