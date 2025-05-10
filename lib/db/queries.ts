@@ -1,12 +1,24 @@
 import 'server-only';
 
-import {genSaltSync, hashSync} from 'bcrypt-ts';
-import {and, asc, desc, eq, gt, gte, inArray} from 'drizzle-orm';
-import {drizzle} from 'drizzle-orm/postgres-js';
+import { genSaltSync, hashSync } from 'bcrypt-ts';
+import { and, asc, desc, eq, gt, gte, inArray } from 'drizzle-orm';
+import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 
-import {chat, type DBMessage, document, message, type Suggestion, suggestion, type User, user, vote,} from './schema';
-import {ArtifactKind} from '@/components/artifact';
+import {
+  chat,
+  type DBMessage,
+  document,
+  message,
+  type Suggestion,
+  suggestion,
+  type User,
+  user,
+  vote,
+  uploadedDocuments,
+  type NewUploadedDocument
+} from './schema';
+import { ArtifactKind } from '@/components/artifact';
 
 // Optionally, if not using email/pass login, you can
 // use the Drizzle adapter for Auth.js / NextAuth
@@ -30,7 +42,7 @@ export async function createUser(email: string, password: string) {
   const hash = hashSync(password, salt);
 
   try {
-    return await db.insert(user).values({email, password: hash});
+    return await db.insert(user).values({ email, password: hash });
   } catch (error) {
     console.error('Failed to create user in database');
     throw error;
@@ -38,11 +50,11 @@ export async function createUser(email: string, password: string) {
 }
 
 export async function saveChat({
-                                 id,
-                                 userId,
-                                 title,
-                                 threadId
-                               }: {
+  id,
+  userId,
+  title,
+  threadId
+}: {
   id: string;
   userId: string;
   title: string;
@@ -62,7 +74,7 @@ export async function saveChat({
   }
 }
 
-export async function deleteChatById({id}: { id: string }) {
+export async function deleteChatById({ id }: { id: string }) {
   try {
     await db.delete(vote).where(eq(vote.chatId, id));
     await db.delete(message).where(eq(message.chatId, id));
@@ -74,7 +86,7 @@ export async function deleteChatById({id}: { id: string }) {
   }
 }
 
-export async function getChatsByUserId({id}: { id: string }) {
+export async function getChatsByUserId({ id }: { id: string }) {
   try {
     return await db
       .select()
@@ -87,7 +99,7 @@ export async function getChatsByUserId({id}: { id: string }) {
   }
 }
 
-export async function getChatById({id}: { id: string }) {
+export async function getChatById({ id }: { id: string }) {
   try {
     const [selectedChat] = await db.select().from(chat).where(eq(chat.id, id));
     return selectedChat;
@@ -98,8 +110,8 @@ export async function getChatById({id}: { id: string }) {
 }
 
 export async function saveMessages({
-                                     messages,
-                                   }: {
+  messages,
+}: {
   messages: Array<DBMessage>;
 }) {
   try {
@@ -110,7 +122,7 @@ export async function saveMessages({
   }
 }
 
-export async function getMessagesByChatId({id}: { id: string }) {
+export async function getMessagesByChatId({ id }: { id: string }) {
   try {
     return await db
       .select()
@@ -124,10 +136,10 @@ export async function getMessagesByChatId({id}: { id: string }) {
 }
 
 export async function voteMessage({
-                                    chatId,
-                                    messageId,
-                                    type,
-                                  }: {
+  chatId,
+  messageId,
+  type,
+}: {
   chatId: string;
   messageId: string;
   type: 'up' | 'down';
@@ -141,7 +153,7 @@ export async function voteMessage({
     if (existingVote) {
       return await db
         .update(vote)
-        .set({isUpvoted: type === 'up'})
+        .set({ isUpvoted: type === 'up' })
         .where(and(eq(vote.messageId, messageId), eq(vote.chatId, chatId)));
     }
     return await db.insert(vote).values({
@@ -155,7 +167,7 @@ export async function voteMessage({
   }
 }
 
-export async function getVotesByChatId({id}: { id: string }) {
+export async function getVotesByChatId({ id }: { id: string }) {
   try {
     return await db.select().from(vote).where(eq(vote.chatId, id));
   } catch (error) {
@@ -165,12 +177,12 @@ export async function getVotesByChatId({id}: { id: string }) {
 }
 
 export async function saveDocument({
-                                     id,
-                                     title,
-                                     kind,
-                                     content,
-                                     userId,
-                                   }: {
+  id,
+  title,
+  kind,
+  content,
+  userId,
+}: {
   id: string;
   title: string;
   kind: ArtifactKind;
@@ -192,7 +204,7 @@ export async function saveDocument({
   }
 }
 
-export async function getDocumentsById({id}: { id: string }) {
+export async function getDocumentsById({ id }: { id: string }) {
   try {
     return await db
       .select()
@@ -205,7 +217,7 @@ export async function getDocumentsById({id}: { id: string }) {
   }
 }
 
-export async function getDocumentById({id}: { id: string }) {
+export async function getDocumentById({ id }: { id: string }) {
   try {
     const [selectedDocument] = await db
       .select()
@@ -221,9 +233,9 @@ export async function getDocumentById({id}: { id: string }) {
 }
 
 export async function deleteDocumentsByIdAfterTimestamp({
-                                                          id,
-                                                          timestamp,
-                                                        }: {
+  id,
+  timestamp,
+}: {
   id: string;
   timestamp: Date;
 }) {
@@ -249,8 +261,8 @@ export async function deleteDocumentsByIdAfterTimestamp({
 }
 
 export async function saveSuggestions({
-                                        suggestions,
-                                      }: {
+  suggestions,
+}: {
   suggestions: Array<Suggestion>;
 }) {
   try {
@@ -262,8 +274,8 @@ export async function saveSuggestions({
 }
 
 export async function getSuggestionsByDocumentId({
-                                                   documentId,
-                                                 }: {
+  documentId,
+}: {
   documentId: string;
 }) {
   try {
@@ -279,7 +291,7 @@ export async function getSuggestionsByDocumentId({
   }
 }
 
-export async function getMessageById({id}: { id: string }) {
+export async function getMessageById({ id }: { id: string }) {
   try {
     return await db.select().from(message).where(eq(message.id, id));
   } catch (error) {
@@ -289,15 +301,15 @@ export async function getMessageById({id}: { id: string }) {
 }
 
 export async function deleteMessagesByChatIdAfterTimestamp({
-                                                             chatId,
-                                                             timestamp,
-                                                           }: {
+  chatId,
+  timestamp,
+}: {
   chatId: string;
   timestamp: Date;
 }) {
   try {
     const messagesToDelete = await db
-      .select({id: message.id})
+      .select({ id: message.id })
       .from(message)
       .where(
         and(eq(message.chatId, chatId), gte(message.createdAt, timestamp)),
@@ -326,11 +338,41 @@ export async function deleteMessagesByChatIdAfterTimestamp({
   }
 }
 
-export async function updateChatThreadId({id, threadId}: { id: string; threadId: string }) {
+export async function updateChatThreadId({ id, threadId }: { id: string; threadId: string }) {
   try {
-    return await db.update(chat).set({threadId}).where(eq(chat.id, id));
+    return await db.update(chat).set({ threadId }).where(eq(chat.id, id));
   } catch (error) {
     console.error('Failed to update chat thread ID');
     throw error;
   }
+}
+
+export async function saveUploadedDocument(document: NewUploadedDocument) {
+  return db.insert(uploadedDocuments).values(document).returning();
+}
+
+export async function getUploadedDocumentsByUserId({ userId }: { userId: string }) {
+  return db
+    .select()
+    .from(uploadedDocuments)
+    .where(eq(uploadedDocuments.userId, userId))
+    .orderBy(uploadedDocuments.createdAt)
+    .execute();
+}
+
+export async function getUploadedDocumentById({ id }: { id: string }) {
+  const results = await db
+    .select()
+    .from(uploadedDocuments)
+    .where(eq(uploadedDocuments.id, id))
+    .execute();
+
+  return results[0];
+}
+
+export async function deleteUploadedDocumentById({ id }: { id: string }) {
+  return db
+    .delete(uploadedDocuments)
+    .where(eq(uploadedDocuments.id, id))
+    .execute();
 }

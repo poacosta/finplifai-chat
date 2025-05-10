@@ -10,6 +10,7 @@ import {
   foreignKey,
   boolean,
 } from 'drizzle-orm/pg-core';
+import { createId } from '@paralleldrive/cuid2';
 
 export const user = pgTable('User', {
   id: uuid('id').primaryKey().notNull().defaultRandom(),
@@ -29,7 +30,7 @@ export const chat = pgTable('Chat', {
   visibility: varchar('visibility', { enum: ['public', 'private'] })
     .notNull()
     .default('private'),
-    threadId: varchar('threadId'),
+  threadId: varchar('threadId'),
 });
 
 export type Chat = InferSelectModel<typeof chat>;
@@ -151,3 +152,16 @@ export const suggestion = pgTable(
 );
 
 export type Suggestion = InferSelectModel<typeof suggestion>;
+
+export const uploadedDocuments = pgTable('uploaded_documents', {
+  id: varchar('id').primaryKey().default(createId()),
+  userId: varchar('user_id').notNull(),
+  fileName: text('file_name').notNull(),
+  fileType: text('file_type').notNull(),
+  blobUrl: text('blob_url').notNull(),
+  openaiFileId: text('openai_file_id'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export type UploadedDocument = typeof uploadedDocuments.$inferSelect;
+export type NewUploadedDocument = typeof uploadedDocuments.$inferInsert;
