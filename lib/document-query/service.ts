@@ -121,3 +121,38 @@ export async function queryDocument(documentId: string, query: string, topK = 3)
     return { success: false, error: String(error) };
   }
 }
+
+/**
+ * Check if a document is indexed
+ */
+export function isDocumentIndexed(documentId: string): boolean {
+  return documentIndices.has(documentId);
+}
+
+/**
+ * Get all indexed documents metadata
+ */
+export function getIndexedDocuments() {
+  const documents = [];
+  for (const [id, metadata] of documentMetadata.entries()) {
+    documents.push({
+      id,
+      ...metadata
+    });
+  }
+  return documents;
+}
+
+/**
+ * Delete a document index
+ */
+export function deleteDocumentIndex(documentId: string): boolean {
+  try {
+    documentIndices.delete(documentId);
+    documentMetadata.delete(documentId);
+    return true;
+  } catch (error) {
+    console.error('Error deleting document index:', error);
+    return false;
+  }
+}
