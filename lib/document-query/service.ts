@@ -1,59 +1,16 @@
-import { VectorStoreIndex, Document, serviceContextFromDefaults } from 'llamaindex';
-import { StorageContext, SimpleDocumentStore, SimpleVectorStore } from 'llamaindex/storage';
-import { OpenAIEmbedding } from 'llamaindex/embeddings/openai';
+import {
+  Document,
+  VectorStoreIndex,
+  OpenAIEmbedding,
+  SentenceSplitter,
+  Settings,
+  MetadataMode
+} from 'llamaindex';
 import { extractTextFromFile } from '@/lib/text-extraction';
 
-// In-memory storage of document indices for the session
+// In-memory storage of document indices and metadata
 const documentIndices = new Map<string, VectorStoreIndex>();
 const documentMetadata = new Map<string, { fileName: string, fileType: string, fileId: string }>();
-
-/**
- * Creates a vector index from document text content
- */
-export async function createDocumentIndex(
-  documentId: string,
-  text: string,
-  metadata: { fileName: string; fileType: string; fileId: string }
-) {
-  try {
-    // Create document with text content
-    const document = new Document({ text, id: documentId, metadata });
-
-    // Initialize embedding model
-    const embedModel = new OpenAIEmbedding({
-      apiKey: process.env.OPENAI_API_KEY,
-      model: 'text-embedding-ada-002',
-    });
-
-    // Setup storage context
-    const storageContext = await StorageContext.fromDefaults({
-      vectorStore: new SimpleVectorStore(),
-      documentStore: new SimpleDocumentStore(),
-    });
-
-    // Create service context with embedding model
-    const serviceContext = serviceContextFromDefaults({
-      embedModel,
-      chunkSize: 1000,
-      chunkOverlap: 200,
-    });
-
-    // Create vector index from document
-    const index = await VectorStoreIndex.fromDocuments([document], {
-      storageContext,
-      serviceContext,
-    });
-
-    // Store index and metadata for later retrieval
-    documentIndices.set(documentId, index);
-    documentMetadata.set(documentId, metadata);
-
-    return { success: true, documentId };
-  } catch (error) {
-    console.error('Error creating document index:', error);
-    return { success: false, error: String(error) };
-  }
-}
 
 /**
  * Process a file and create searchable index
@@ -73,8 +30,38 @@ export async function processFile(
       return { success: false, error: 'Could not extract text from file' };
     }
 
-    // Create index from text content
-    return createDocumentIndex(documentId, text, { fileName, fileType, fileId });
+    // Create document object with metadata
+    const document = new Document({
+      text,
+      metadata: {
+        documentId,
+        fileName,
+        fileType
+      }
+    });
+
+    // Create embeddings model
+    const embedModel = new OpenAIEmbedding({
+      apiKey: process.env.OPENAI_API_KEY || '',
+    });
+
+    // Set node parser in global settings
+    Settings.nodeParser = new SentenceSplitter({
+      chunkSize: 1000,
+      chunkOverlap: 200
+    });
+
+    // Set embedding model
+    Settings.embedModel = embedModel;
+
+    // Create index
+    const index = await VectorStoreIndex.fromDocuments([document]);
+
+    // Store index and metadata for later retrieval
+    documentIndices.set(documentId, index);
+    documentMetadata.set(documentId, { fileName, fileType, fileId });
+
+    return { success: true, documentId };
   } catch (error) {
     console.error('Error processing file:', error);
     return { success: false, error: String(error) };
@@ -92,51 +79,45 @@ export async function queryDocument(documentId: string, query: string, topK = 3)
       return { success: false, error: 'Document index not found' };
     }
 
+    // Create retriever
+    const retriever = index.asRetriever({
+      similarityTopK: topK
+    });
+
     // Create query engine
-    const queryEngine = index.asQueryEngine();
+    const queryEngine = index.asQueryEngine({
+      retriever
+    });
 
     // Execute query
     const response = await queryEngine.query({
-      query,
+      query: query
     });
 
     // Get metadata for the document
     const metadata = documentMetadata.get(documentId);
 
+    // Extract source node information safely
+    const sourceNodes = [];
+
+    if (response.sourceNodes && Array.isArray(response.sourceNodes)) {
+      for (const node of response.sourceNodes) {
+        sourceNodes.push({
+          text: node.node.getContent(MetadataMode.NONE),
+          score: typeof node.score === 'number' ? node.score : 0,
+          metadata: node.node.metadata || {}
+        });
+      }
+    }
+
     return {
       success: true,
-      result: response.toString(),
-      sourceNodes: response.sourceNodes,
+      result: response.message.content,
+      sourceNodes,
       metadata
     };
   } catch (error) {
     console.error('Error querying document:', error);
     return { success: false, error: String(error) };
   }
-}
-
-/**
- * Get all indexed documents
- */
-export function getIndexedDocuments() {
-  return Array.from(documentMetadata.entries()).map(([id, metadata]) => ({
-    id,
-    ...metadata
-  }));
-}
-
-/**
- * Check if a document is indexed
- */
-export function isDocumentIndexed(documentId: string) {
-  return documentIndices.has(documentId);
-}
-
-/**
- * Delete a document index
- */
-export function deleteDocumentIndex(documentId: string) {
-  const wasDeleted = documentIndices.delete(documentId);
-  documentMetadata.delete(documentId);
-  return { success: wasDeleted };
 }

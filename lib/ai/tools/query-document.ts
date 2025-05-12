@@ -66,11 +66,7 @@ export const queryDocumentTool = ({ dataStream }: QueryDocumentProps) =>
           success: true,
           result: result.result,
           documentName: dbDocument.fileName,
-          sourceNodes: result.sourceNodes?.map(node => ({
-            text: node.text,
-            score: node.score,
-            metadata: node.metadata,
-          })),
+          sourceNodes: result.sourceNodes,
         };
       } catch (error) {
         console.error('Error querying document:', error);

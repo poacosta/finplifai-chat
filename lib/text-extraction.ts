@@ -16,8 +16,6 @@ export async function extractTextFromFile(
       return extractTextFromCSV(fileBuffer);
     case 'image/jpeg':
     case 'image/png':
-      // For images, we might want to use OCR in a production environment
-      // For now, return a placeholder indicating it's an image
       return `[Image file uploaded - no text content extracted]`;
     default:
       return `[File type ${fileType} not supported for text extraction]`;
@@ -29,12 +27,7 @@ export async function extractTextFromFile(
  */
 async function extractTextFromPDF(fileBuffer: ArrayBuffer): Promise<string> {
   try {
-    // This is a server-side function, so we can use pdf-parse
-    // First we need to convert the ArrayBuffer to a Buffer
     const buffer = Buffer.from(fileBuffer);
-
-    // In a production environment, we would use pdf-parse or similar
-    // For the prototype, we're importing dynamically to avoid including it in the client bundle
     const pdfParse = (await import('pdf-parse')).default;
     const data = await pdfParse(buffer);
     return data.text;
@@ -65,13 +58,11 @@ function extractTextFromCSV(fileBuffer: ArrayBuffer): string {
     const decoder = new TextDecoder('utf-8');
     const csvString = decoder.decode(fileBuffer);
 
-    // Parse CSV to get structured data
     const result = parse(csvString, {
       header: true,
       skipEmptyLines: true,
     });
 
-    // Convert the parsed data to a readable string format
     let textContent = '';
 
     // Add headers
