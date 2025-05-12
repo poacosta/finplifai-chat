@@ -153,14 +153,14 @@ export const suggestion = pgTable(
 
 export type Suggestion = InferSelectModel<typeof suggestion>;
 
-export const uploadedDocuments = pgTable('uploaded_documents', {
+export const uploadedDocuments = pgTable('uploadedDocuments', {
   id: varchar('id').primaryKey().default(createId()),
-  userId: varchar('user_id').notNull(),
-  fileName: text('file_name').notNull(),
-  fileType: text('file_type').notNull(),
-  blobUrl: text('blob_url').notNull(),
-  openaiFileId: text('openai_file_id'),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
+  userId: varchar('userId').notNull(),
+  fileName: text('fileName').notNull(),
+  fileType: text('fileType').notNull(),
+  blobUrl: text('blobUrl').notNull(),
+  openaiFileId: text('openaiFileId'),
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
 });
 
 export type UploadedDocument = typeof uploadedDocuments.$inferSelect;

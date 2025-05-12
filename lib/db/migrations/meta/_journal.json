@@ -50,6 +50,13 @@
       "when": 1745360809614,
       "tag": "0006_add-threadid-to-chat-table",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1747093087093,
+      "tag": "0007_uploaded-documents",
+      "breakpoints": true
     }
   ]
 }
