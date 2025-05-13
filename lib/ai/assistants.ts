@@ -1,7 +1,6 @@
 // eslint-disable-next-line import/no-named-as-default
 import OpenAI from 'openai';
-import { generateUUID } from "@/lib/utils";
-import { DataStreamWriter } from "ai";
+import { updateChatThreadId } from "@/lib/db/queries";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -10,21 +9,10 @@ const openai = new OpenAI({
   }
 });
 
-const ASSISTANT_ID = process.env.OPENAI_ASSISTANT_ID || 'assistant-1';
+// Use your specified assistant ID
+const ASSISTANT_ID = process.env.OPENAI_ASSISTANT_ID || 'assistant-1234567890';
 
-export async function createThread() {
-  return openai.beta.threads.create();
-}
-
-export async function getThread(threadId: string) {
-  try {
-    return await openai.beta.threads.retrieve(threadId);
-  } catch (error) {
-    console.error('Error retrieving thread:', error);
-    return null;
-  }
-}
-
+// Delete thread
 export async function deleteThread(threadId: string) {
   try {
     await openai.beta.threads.del(threadId);
@@ -35,111 +23,113 @@ export async function deleteThread(threadId: string) {
   }
 }
 
+// Add message to thread
 export async function addMessageToThread(threadId: string, content: string, fileIds: string[] = []) {
-  let messageContent: any;
+  try {
+    const messageParams: any = {
+      role: 'user',
+      content: content
+    };
 
-  if (fileIds.length > 0) {
-    messageContent = [
-      { type: "text", text: content },
-      ...fileIds.map(fileId => ({
-        type: "file_attachment",
-        file_id: fileId
-      }))
-    ];
-  } else {
-    messageContent = content; // Simple text content
-  }
-
-  return openai.beta.threads.messages.create(threadId, {
-    role: 'user',
-    content: messageContent,
-  });
-}
-
-export async function uploadFile(file: File) {
-  const uploadedFile = await openai.files.create({
-    file,
-    purpose: 'assistants',
-  });
-  return uploadedFile.id;
-}
-
-export async function runAssistant(threadId: string) {
-  const run = await openai.beta.threads.runs.create(threadId, {
-    assistant_id: ASSISTANT_ID,
-  });
-
-  let runStatus = await openai.beta.threads.runs.retrieve(threadId, run.id);
-
-  while (runStatus.status !== 'completed' && runStatus.status !== 'failed') {
-    await new Promise(resolve => setTimeout(resolve, 50));
-
-    runStatus = await openai.beta.threads.runs.retrieve(threadId, run.id);
-  }
-
-  if (runStatus.status === 'failed') {
-    throw new Error(`Run failed: ${runStatus.last_error?.message || 'Unknown error'}`);
-  }
-
-  const messages = await openai.beta.threads.messages.list(threadId, {
-    order: 'desc',
-    limit: 1,
-  });
-
-  const assistantMessage = messages.data.find(msg => msg.role === 'assistant');
-
-  if (!assistantMessage) {
-    throw new Error('No assistant message found');
-  }
-
-  return assistantMessage;
-}
-
-export async function runAssistantWithStreaming(
-  threadId: string,
-  dataStream: DataStreamWriter
-) {
-  const assistantId = generateUUID();
-  dataStream.writeData({ type: 'id', content: assistantId });
-
-  const assistantMessage = await runAssistant(threadId);
-
-  let contentParts: any[] = [];
-
-  for (const content of assistantMessage.content) {
-    if (content.type === 'text') {
-      const text = content.text.value;
-      contentParts.push({ type: 'text', text });
-
-      const words = text.split(' ');
-
-      for (let i = 0; i < words.length; i++) {
-        dataStream.writeData({
-          type: 'text-delta',
-          content: words[i] + (i < words.length - 1 ? ' ' : ''),
-        });
-      }
-    } else if (content.type === 'image_file') {
-      const imageUrl = `/api/assistant-file?file_id=${content.image_file.file_id}`;
-
-      contentParts.push({
-        type: 'image_url',
-        image_url: { url: imageUrl }
-      });
-
-      dataStream.writeData({
-        type: 'image-delta',
-        content: imageUrl,
-      });
+    // Add file_ids if provided (using any to bypass TS limitations)
+    if (fileIds.length > 0) {
+      messageParams.file_ids = fileIds;
     }
+
+    return await openai.beta.threads.messages.create(threadId, messageParams);
+  } catch (error) {
+    console.error('Error adding message to thread:', error);
+    throw error;
   }
+}
 
-  dataStream.writeData({ type: 'finish', content: '' });
+// Upload file to OpenAI (returns file ID)
+export async function uploadFile(file: File) {
+  try {
+    const uploadedFile = await openai.files.create({
+      file,
+      purpose: 'assistants',
+    });
+    return uploadedFile.id;
+  } catch (error) {
+    console.error('Error uploading file:', error);
+    throw error;
+  }
+}
 
-  return {
-    id: assistantId,
-    role: 'assistant',
-    parts: contentParts,
-    createdAt: new Date(),
-  };
+export async function searchFilesWithAssistant(threadId: string, query: string) {
+  try {
+    // Add the query as a message requesting document search
+    await addMessageToThread(
+      threadId,
+      `Por favor, busca en los documentos subidos la información relacionada con: ${query}`
+    );
+
+    // Run the assistant with file_search tool enabled
+    const run = await openai.beta.threads.runs.create(threadId, {
+      assistant_id: ASSISTANT_ID,
+      tools: [{ type: "file_search" }]
+    });
+
+    // Wait for completion with timeout
+    let runStatus = await openai.beta.threads.runs.retrieve(threadId, run.id);
+    const startTime = Date.now();
+    const timeoutMs = 15000;
+
+    while (runStatus.status !== 'completed' && runStatus.status !== 'failed') {
+      if (Date.now() - startTime > timeoutMs) break;
+      await new Promise(resolve => setTimeout(resolve, 500));
+      runStatus = await openai.beta.threads.runs.retrieve(threadId, run.id);
+    }
+
+    if (runStatus.status !== 'completed') {
+      console.warn(`Assistant run ${runStatus.status}`);
+      return null;
+    }
+
+    // Get response
+    const messages = await openai.beta.threads.messages.list(threadId, {
+      order: 'desc',
+      limit: 1,
+    });
+
+    return messages.data[0];
+  } catch (error) {
+    console.error('Error searching files with assistant:', error);
+    return null;
+  }
+}
+
+export async function createThreadForChat(chatId: string) {
+  try {
+    const thread = await openai.beta.threads.create();
+    if (thread) {
+      await updateChatThreadId({ id: chatId, threadId: thread.id });
+      return thread.id;
+    }
+    return null;
+  } catch (error) {
+    console.error('Error creating thread for chat:', error);
+    return null;
+  }
+}
+
+// Attach a file to a thread
+export async function attachFileToThread(threadId: string, fileId: string) {
+  try {
+    // Use type assertion to bypass TypeScript limitation
+    const messageParams = {
+      role: 'user',
+      content: "Documento adjunto para análisis."
+    } as any;
+
+    // Add file_ids property after type assertion
+    messageParams.file_ids = [fileId];
+
+    await openai.beta.threads.messages.create(threadId, messageParams);
+    return true;
+  } catch (error) {
+    console.error('Error attaching file to thread:', error);
+    return false;
+  }
 }

@@ -3,9 +3,9 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { auth } from '@/app/(auth)/auth';
-import { extractTextFromFile } from '@/lib/text-extraction';
 import { generateUUID } from '@/lib/utils';
-import { uploadFile } from "@/lib/ai/assistants";
+import { attachFileToThread, createThreadForChat, uploadFile } from "@/lib/ai/assistants";
+import { getChatById } from "@/lib/db/queries";
 
 // Define supported file types
 const SUPPORTED_FILE_TYPES = [
@@ -62,11 +62,30 @@ export async function POST(request: Request) {
     const fileBuffer = await file.arrayBuffer();
 
     try {
+      // Get chatId from the form data
+      const chatId = formData.get('chatId') as string;
+
+      // Upload to Vercel Blob as you currently do
       const data = await put(`${filename}`, fileBuffer, { access: 'public' });
 
-      // Also upload to OpenAI for Assistants API
+      // Upload to OpenAI for Assistants API
       const fileObj = new File([fileBuffer], filename, { type: file.type });
       const openaiFileId = await uploadFile(fileObj);
+
+      // Attach the file to the thread if chatId is provided
+      if (chatId) {
+        const chat = await getChatById({ id: chatId });
+
+        if (chat && chat.threadId) {
+          await attachFileToThread(chat.threadId, openaiFileId);
+        } else if (chat && !chat.threadId) {
+          // Create a thread for this chat if it doesn't have one
+          const threadId = await createThreadForChat(chatId);
+          if (threadId) {
+            await attachFileToThread(threadId, openaiFileId);
+          }
+        }
+      }
 
       return NextResponse.json({
         ...data,
@@ -74,7 +93,7 @@ export async function POST(request: Request) {
         contentType: file.type,
         pathname: filename,
         documentId: generateUUID(),
-        openaiFileId: openaiFileId, // Include this for later reference
+        openaiFileId: openaiFileId,
       });
     } catch (error) {
       console.error('Error during file upload:', error);
