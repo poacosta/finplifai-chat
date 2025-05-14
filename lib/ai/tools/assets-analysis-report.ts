@@ -7,12 +7,14 @@ interface AssetsAnalysisReportInfoProps {
 
 export const createAssetsAnalysisReport = ({ dataStream }: AssetsAnalysisReportInfoProps) =>
   tool({
-    description: 'Crea el análisis de activos y pasivos de la empresa',
+    description: 'Crea el análisis de activos y pasivos de la empresa basado en un archivo',
     parameters: z.object({
-      query: z.string()
+      fileId: z.string().describe('ID del archivo a analizar')
     }),
-    execute: async ({ query }) => {
+    execute: async ({ fileId }) => {
       try {
+        const fileUrl = fileId.startsWith('http') ? fileId : `https://${process.env.VERCEL_BLOB_STORE_ID}.public.blob.vercel-storage.com/${fileId}`;
+
         const url = `${process.env.ASSETS_ANALYSIS_AGENT_API_URL}`;
 
         const response = await fetch(url, {
@@ -20,7 +22,7 @@ export const createAssetsAnalysisReport = ({ dataStream }: AssetsAnalysisReportI
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ query }),
+          body: JSON.stringify({ files: fileUrl }),
         });
 
         if (!response.ok) {
@@ -33,14 +35,14 @@ export const createAssetsAnalysisReport = ({ dataStream }: AssetsAnalysisReportI
         dataStream.writeData({
           type: 'text-delta',
           content: result,
-        })
+        });
 
         return result;
       } catch (error) {
-        console.error('Error fetching legal expert info:', error);
+        console.error('Error fetching assets analysis info:', error);
         dataStream.writeData({
           type: 'error',
-          content: 'Failed to load legal expert information. Please try again later.',
+          content: 'No se pudo cargar el análisis de activos. Inténtelo de nuevo más tarde.',
         });
       }
     },
