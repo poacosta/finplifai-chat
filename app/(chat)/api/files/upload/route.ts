@@ -64,6 +64,10 @@ export async function POST(request: Request) {
     try {
       const chatId = formData.get('chatId') as string;
 
+      if (!chatId) {
+        return NextResponse.json({ error: 'Se requiere iniciar el chat antes de subir algún archivo' }, { status: 400 });
+      }
+
       // Upload to Vercel Blob as you currently do
       const data = await put(`${filename}`, fileBuffer, { access: 'public' });
 
