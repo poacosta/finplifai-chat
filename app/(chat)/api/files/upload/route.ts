@@ -62,7 +62,6 @@ export async function POST(request: Request) {
     const fileBuffer = await file.arrayBuffer();
 
     try {
-      // Get chatId from the form data
       const chatId = formData.get('chatId') as string;
 
       // Upload to Vercel Blob as you currently do
@@ -72,14 +71,12 @@ export async function POST(request: Request) {
       const fileObj = new File([fileBuffer], filename, { type: file.type });
       const openaiFileId = await uploadFile(fileObj);
 
-      // Attach the file to the thread if chatId is provided
       if (chatId) {
         const chat = await getChatById({ id: chatId });
 
         if (chat && chat.threadId) {
           await attachFileToThread(chat.threadId, openaiFileId);
         } else if (chat && !chat.threadId) {
-          // Create a thread for this chat if it doesn't have one
           const threadId = await createThreadForChat(chatId);
           if (threadId) {
             await attachFileToThread(threadId, openaiFileId);

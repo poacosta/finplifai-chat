@@ -79,8 +79,6 @@ export async function POST(request: Request) {
     let documentContext = '';
     if (chat?.threadId) {
       try {
-        console.log(`Searching files in thread ${chat.threadId} for query: ${userMessage.content}`);
-
         documentContext = await searchFilesWithAssistant(
           chat.threadId,
           userMessage.content
@@ -95,13 +93,18 @@ export async function POST(request: Request) {
       ? `${systemPrompt()}\n\nCONTEXTO DE DOCUMENTOS:\n${documentContext}`
       : systemPrompt();
 
+    const messagesWithoutAttachments = messages.map((msg: any) => ({
+      ...msg,
+      experimental_attachments: undefined
+    }));
+
     return createDataStreamResponse({
       execute: async (dataStream) => {
         try {
           const result = streamText({
             model: myProvider.languageModel(selectedChatModel),
             system: enhancedSystemPrompt,
-            messages,
+            messages: messagesWithoutAttachments,
             maxSteps: 5,
             experimental_activeTools:
               selectedChatModel === 'chat-model-reasoning'
