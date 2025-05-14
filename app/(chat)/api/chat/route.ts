@@ -76,27 +76,23 @@ export async function POST(request: Request) {
       ],
     });
 
-    let documentContext: string | null = '';
+    let documentContext = '';
     if (chat?.threadId) {
       try {
-        // Now returns plain text instead of complex object
+        console.log(`Searching files in thread ${chat.threadId} for query: ${userMessage.content}`);
+
         documentContext = await searchFilesWithAssistant(
           chat.threadId,
           userMessage.content
         );
-
-        if (documentContext) {
-          console.log('Retrieved document context:', documentContext.substring(0, 100) + '...');
-        }
       } catch (error) {
         console.error('Error searching files:', error);
+        documentContext = '';
       }
     }
 
-    console.error('Contexto del documento: ', documentContext);
-
     const enhancedSystemPrompt = documentContext
-      ? `${systemPrompt()}\n\nContexto de documentos:\n${documentContext}`
+      ? `${systemPrompt()}\n\nCONTEXTO DE DOCUMENTOS:\n${documentContext}`
       : systemPrompt();
 
     return createDataStreamResponse({
