@@ -101,6 +101,7 @@ export async function POST(request: Request) {
           contentType: file.type,
           pathname: filename,
           documentId: generateUUID(),
+          vercelUrl: data.url,
           openaiFileId: openaiFileId,
         });
       }
@@ -111,6 +112,7 @@ export async function POST(request: Request) {
         contentType: file.type,
         pathname: filename,
         documentId: generateUUID(),
+        vercelUrl: data.url,
       });
     } catch (error) {
       console.error('Error during file upload:', error);
