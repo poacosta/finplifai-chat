@@ -10,6 +10,7 @@ import { createDocument } from '@/lib/ai/tools/create-document';
 import { updateDocument } from '@/lib/ai/tools/update-document';
 import { getLegalExpertInfo } from '@/lib/ai/tools/get-legal-expert-info';
 import { getRandomPic } from "@/lib/ai/tools/get-random-pic";
+import { createAssetsAnalysisReport } from "@/lib/ai/tools/assets-analysis-report";
 import { createThreadForChat, searchFilesWithAssistant } from "@/lib/ai/assistants";
 
 export const maxDuration = 60;
@@ -112,6 +113,7 @@ export async function POST(request: Request) {
                 : [
                   'getRandomPic',
                   'getLegalExpertInfo',
+                  'createAssetsAnalysisReport',
                   'createDocument',
                   'updateDocument',
                 ],
@@ -119,6 +121,7 @@ export async function POST(request: Request) {
             experimental_generateMessageId: generateUUID,
             tools: {
               getRandomPic,
+              createAssetsAnalysisReport: createAssetsAnalysisReport({ dataStream }),
               getLegalExpertInfo: getLegalExpertInfo({ dataStream }),
               createDocument: createDocument({ session, dataStream }),
               updateDocument: updateDocument({ session, dataStream }),
