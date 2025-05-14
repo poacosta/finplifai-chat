@@ -1,6 +1,6 @@
 'use client';
 
-import type { Attachment, Message, UIMessage } from 'ai';
+import type { Attachment, UIMessage } from 'ai';
 import cx from 'classnames';
 import type React from 'react';
 import {
@@ -129,6 +129,7 @@ function PureMultimodalInput({
   const uploadFile = async (file: File) => {
     const formData = new FormData();
     formData.append('file', file);
+    formData.append('chatId', chatId);
 
     try {
       const response = await fetch('/api/files/upload', {
@@ -185,7 +186,7 @@ function PureMultimodalInput({
       {messages.length === 0 &&
         attachments.length === 0 &&
         uploadQueue.length === 0 && (
-          <SuggestedActions append={append} chatId={chatId} />
+          <SuggestedActions append={append} chatId={chatId}/>
         )}
 
       <input
@@ -203,7 +204,7 @@ function PureMultimodalInput({
           className="flex flex-row gap-2 overflow-x-scroll items-end"
         >
           {attachments.map((attachment) => (
-            <PreviewAttachment key={attachment.url} attachment={attachment} />
+            <PreviewAttachment key={attachment.url} attachment={attachment}/>
           ))}
 
           {uploadQueue.map((filename) => (
@@ -252,12 +253,12 @@ function PureMultimodalInput({
       />
 
       <div className="absolute bottom-0 p-2 w-fit flex flex-row justify-start">
-        <AttachmentsButton fileInputRef={fileInputRef} status={status} />
+        <AttachmentsButton fileInputRef={fileInputRef} status={status}/>
       </div>
 
       <div className="absolute bottom-0 right-0 p-2 w-fit flex flex-row justify-end">
         {status === 'submitted' ? (
-          <StopButton stop={stop} setMessages={setMessages} />
+          <StopButton stop={stop} setMessages={setMessages}/>
         ) : (
           <SendButton
             input={input}
@@ -275,9 +276,7 @@ export const MultimodalInput = memo(
   (prevProps, nextProps) => {
     if (prevProps.input !== nextProps.input) return false;
     if (prevProps.status !== nextProps.status) return false;
-    if (!equal(prevProps.attachments, nextProps.attachments)) return false;
-
-    return true;
+    return equal(prevProps.attachments, nextProps.attachments);
   },
 );
 
@@ -299,7 +298,7 @@ function PureAttachmentsButton({
       disabled={status !== 'ready'}
       variant="ghost"
     >
-      <PaperclipIcon size={14} />
+      <PaperclipIcon size={14}/>
     </Button>
   );
 }
@@ -323,7 +322,7 @@ function PureStopButton({
         setMessages((messages) => messages);
       }}
     >
-      <StopIcon size={14} />
+      <StopIcon size={14}/>
     </Button>
   );
 }
@@ -349,7 +348,7 @@ function PureSendButton({
       }}
       disabled={input.length === 0 || uploadQueue.length > 0}
     >
-      <ArrowUpIcon size={14} />
+      <ArrowUpIcon size={14}/>
     </Button>
   );
 }
@@ -357,6 +356,5 @@ function PureSendButton({
 const SendButton = memo(PureSendButton, (prevProps, nextProps) => {
   if (prevProps.uploadQueue.length !== nextProps.uploadQueue.length)
     return false;
-  if (prevProps.input !== nextProps.input) return false;
-  return true;
+  return prevProps.input === nextProps.input;
 });

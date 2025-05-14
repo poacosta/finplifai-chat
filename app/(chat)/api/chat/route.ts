@@ -10,6 +10,7 @@ import { createDocument } from '@/lib/ai/tools/create-document';
 import { updateDocument } from '@/lib/ai/tools/update-document';
 import { getLegalExpertInfo } from '@/lib/ai/tools/get-legal-expert-info';
 import { getRandomPic } from "@/lib/ai/tools/get-random-pic";
+import { createThreadForChat, searchFilesWithAssistant } from "@/lib/ai/assistants";
 
 export const maxDuration = 60;
 
@@ -40,12 +41,22 @@ export async function POST(request: Request) {
         message: userMessage,
       });
 
+      // Create a new thread for this chat
+      let threadId = null;
+      try {
+        threadId = await createThreadForChat(id);
+      } catch (error) {
+        console.error('Failed to create thread for chat:', error);
+      }
+
       await saveChat({
         id,
         userId: session.user.id,
         title,
-        threadId: null,
+        threadId,
       });
+
+      chat = await getChatById({ id });
     } else {
       if (chat.userId !== session.user.id) {
         return new Response('Unauthorized', { status: 401 });
@@ -65,13 +76,35 @@ export async function POST(request: Request) {
       ],
     });
 
+    let documentContext = '';
+    if (chat?.threadId) {
+      try {
+        documentContext = await searchFilesWithAssistant(
+          chat.threadId,
+          userMessage.content
+        );
+      } catch (error) {
+        console.error('Error searching files:', error);
+        documentContext = '';
+      }
+    }
+
+    const enhancedSystemPrompt = documentContext
+      ? `${systemPrompt()}\n\nCONTEXTO DE DOCUMENTOS:\n${documentContext}`
+      : systemPrompt();
+
+    const messagesWithoutAttachments = messages.map((msg: any) => ({
+      ...msg,
+      experimental_attachments: undefined
+    }));
+
     return createDataStreamResponse({
       execute: async (dataStream) => {
         try {
           const result = streamText({
             model: myProvider.languageModel(selectedChatModel),
-            system: systemPrompt(),
-            messages,
+            system: enhancedSystemPrompt,
+            messages: messagesWithoutAttachments,
             maxSteps: 5,
             experimental_activeTools:
               selectedChatModel === 'chat-model-reasoning'
@@ -144,7 +177,8 @@ export async function POST(request: Request) {
           });
         }
       },
-      onError: () => {
+      onError: (error) => {
+        console.error('Error in data stream:', error);
         return 'Oops, an error occurred!';
       },
     });

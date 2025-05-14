@@ -3,9 +3,9 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { auth } from '@/app/(auth)/auth';
-import { extractTextFromFile } from '@/lib/text-extraction';
 import { generateUUID } from '@/lib/utils';
-import { uploadFile } from "@/lib/ai/assistants";
+import { attachFileToThread, createThreadForChat, uploadFile } from "@/lib/ai/assistants";
+import { getChatById } from "@/lib/db/queries";
 
 // Define supported file types
 const SUPPORTED_FILE_TYPES = [
@@ -62,11 +62,26 @@ export async function POST(request: Request) {
     const fileBuffer = await file.arrayBuffer();
 
     try {
+      const chatId = formData.get('chatId') as string;
+
+      if (!chatId) return NextResponse.json({ error: 'Se requiere el identificador del chat antes de continuar' }, { status: 400 });
+
+      const chat = await getChatById({ id: chatId });
+
+      if (!chat) return NextResponse.json({ error: 'El chat debe estar iniciado antes de subir archivos' }, { status: 400 });
+
+      const threadId = (chat && !chat.threadId) ? await createThreadForChat(chatId) : chat.threadId;
+
+      if (!threadId) return NextResponse.json({ error: 'El chat debe conectado al LLM antes de subir archivos' }, { status: 400 });
+
+      // Upload to Vercel Blob as you currently do
       const data = await put(`${filename}`, fileBuffer, { access: 'public' });
 
-      // Also upload to OpenAI for Assistants API
+      // Upload to OpenAI for Assistants API
       const fileObj = new File([fileBuffer], filename, { type: file.type });
       const openaiFileId = await uploadFile(fileObj);
+
+      await attachFileToThread(threadId, openaiFileId);
 
       return NextResponse.json({
         ...data,
@@ -74,7 +89,7 @@ export async function POST(request: Request) {
         contentType: file.type,
         pathname: filename,
         documentId: generateUUID(),
-        openaiFileId: openaiFileId, // Include this for later reference
+        openaiFileId: openaiFileId,
       });
     } catch (error) {
       console.error('Error during file upload:', error);
