@@ -64,9 +64,15 @@ export async function POST(request: Request) {
     try {
       const chatId = formData.get('chatId') as string;
 
-      if (!chatId) {
-        return NextResponse.json({ error: 'Se requiere iniciar el chat antes de subir algún archivo' }, { status: 400 });
-      }
+      if (!chatId) return NextResponse.json({ error: 'Se requiere el identificador del chat antes de continuar' }, { status: 400 });
+
+      const chat = await getChatById({ id: chatId });
+
+      if (!chat) return NextResponse.json({ error: 'El chat debe estar iniciado antes de subir archivos' }, { status: 400 });
+
+      const threadId = (chat && !chat.threadId) ? await createThreadForChat(chatId) : chat.threadId;
+
+      if (!threadId) return NextResponse.json({ error: 'El chat debe conectado al LLM antes de subir archivos' }, { status: 400 });
 
       // Upload to Vercel Blob as you currently do
       const data = await put(`${filename}`, fileBuffer, { access: 'public' });
@@ -75,18 +81,7 @@ export async function POST(request: Request) {
       const fileObj = new File([fileBuffer], filename, { type: file.type });
       const openaiFileId = await uploadFile(fileObj);
 
-      if (chatId) {
-        const chat = await getChatById({ id: chatId });
-
-        if (chat && chat.threadId) {
-          await attachFileToThread(chat.threadId, openaiFileId);
-        } else if (chat && !chat.threadId) {
-          const threadId = await createThreadForChat(chatId);
-          if (threadId) {
-            await attachFileToThread(threadId, openaiFileId);
-          }
-        }
-      }
+      await attachFileToThread(threadId, openaiFileId);
 
       return NextResponse.json({
         ...data,
