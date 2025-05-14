@@ -55,13 +55,13 @@ export async function uploadFile(file: File) {
 export async function searchFilesWithAssistant(threadId: string, query: string): Promise<string> {
   await addMessageToThread(
     threadId,
-    `INSTRUCTION: Find information relevant to: ${query}\nReturn only facts from the uploaded documents.`
+    `Find information about: ${query}`
   );
 
   const run = await openai.beta.threads.runs.createAndPoll(threadId, {
     assistant_id: process.env.OPENAI_ASSISTANT_ID || ASSISTANT_ID,
     tools: [{ type: "file_search" }],
-    instructions: "Search documents for relevant information."
+    instructions: "Search the uploaded documents and extract relevant information."
   });
 
   const messages = await openai.beta.threads.messages.list(threadId, {
@@ -76,7 +76,6 @@ export async function searchFilesWithAssistant(threadId: string, query: string):
 
   if (message.content[0].type === "text") {
     const { text } = message.content[0];
-
     return text.value.trim();
   }
 
@@ -99,14 +98,17 @@ export async function createThreadForChat(chatId: string) {
 
 export async function attachFileToThread(threadId: string, fileId: string) {
   try {
-    const messageParams = {
-      role: 'user',
-      content: "Documento adjunto para análisis."
-    } as any;
-
-    messageParams.file_ids = [fileId];
+    const messageParams: OpenAI.Beta.Threads.Messages.MessageCreateParams = {
+      role: "user",
+      content: "Documento adjunto para análisis.",
+      attachments: [{
+        file_id: fileId,
+        tools: [{ type: "file_search" }]
+      }]
+    };
 
     await openai.beta.threads.messages.create(threadId, messageParams);
+
     return true;
   } catch (error) {
     console.error('Error attaching file to thread:', error);
