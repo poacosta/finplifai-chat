@@ -30,7 +30,7 @@ export const createAssetsAnalysisReport = ({ dataStream }: AssetsAnalysisReportI
         }
 
         const data = await response.json();
-        const result = data['final_response'];
+        const result = data['markdown_content'];
 
         dataStream.writeData({
           type: 'text-delta',
