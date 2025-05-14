@@ -76,25 +76,24 @@ export async function POST(request: Request) {
       ],
     });
 
-    let documentContext = '';
+    let documentContext: string | null = '';
     if (chat?.threadId) {
       try {
-        // Search files using the assistant
-        const searchResult = await searchFilesWithAssistant(
+        // Now returns plain text instead of complex object
+        documentContext = await searchFilesWithAssistant(
           chat.threadId,
           userMessage.content
         );
 
-        if (searchResult && searchResult.content) {
-          documentContext = searchResult.content
-            .filter(item => item.type === 'text')
-            .map(item => (item.type === 'text' ? item.text.value : ''))
-            .join('\n');
+        if (documentContext) {
+          console.log('Retrieved document context:', documentContext.substring(0, 100) + '...');
         }
       } catch (error) {
         console.error('Error searching files:', error);
       }
     }
+
+    console.error('Contexto del documento: ', documentContext);
 
     const enhancedSystemPrompt = documentContext
       ? `${systemPrompt()}\n\nContexto de documentos:\n${documentContext}`
@@ -179,7 +178,8 @@ export async function POST(request: Request) {
           });
         }
       },
-      onError: () => {
+      onError: (error) => {
+        console.error('Error in data stream:', error);
         return 'Oops, an error occurred!';
       },
     });

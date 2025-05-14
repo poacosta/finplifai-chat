@@ -59,42 +59,74 @@ export async function uploadFile(file: File) {
 
 export async function searchFilesWithAssistant(threadId: string, query: string) {
   try {
-    // Add the query as a message requesting document search
+    // 1. Add message to thread with clear instruction
     await addMessageToThread(
       threadId,
-      `Por favor, busca en los documentos subidos la información relacionada con: ${query}`
+      `INSTRUCTION: Search for information relevant to the following query: ${query}\nPlease only return facts from the uploaded documents.`
     );
 
-    // Run the assistant with file_search tool enabled
+    // 2. Create a run with explicit configuration
     const run = await openai.beta.threads.runs.create(threadId, {
-      assistant_id: ASSISTANT_ID,
-      tools: [{ type: "file_search" }]
+      assistant_id: process.env.OPENAI_ASSISTANT_ID || ASSISTANT_ID,
+      tools: [{ type: "file_search" }],
+      instructions: "Search documents for relevant information. Return only factual content found in documents."
     });
 
-    // Wait for completion with timeout
+    // 3. Improved polling mechanism with better timeout
     let runStatus = await openai.beta.threads.runs.retrieve(threadId, run.id);
     const startTime = Date.now();
-    const timeoutMs = 15000;
+    const maxTimeoutMs = 30000; // Longer timeout for larger documents
+
+    console.log(`Assistant run started with ID: ${run.id}`);
 
     while (runStatus.status !== 'completed' && runStatus.status !== 'failed') {
-      if (Date.now() - startTime > timeoutMs) break;
-      await new Promise(resolve => setTimeout(resolve, 500));
+      if (Date.now() - startTime > maxTimeoutMs) {
+        console.warn(`Run timed out after ${maxTimeoutMs}ms`);
+        await openai.beta.threads.runs.cancel(threadId, run.id);
+        break;
+      }
+
+      // Exponential backoff for polling
+      const delay = Math.min(500 * Math.pow(1.5, Math.floor((Date.now() - startTime) / 1000)), 5000);
+      await new Promise(resolve => setTimeout(resolve, delay));
+
       runStatus = await openai.beta.threads.runs.retrieve(threadId, run.id);
+      console.log(`Run status: ${runStatus}`);
     }
 
-    if (runStatus.status !== 'completed') {
-      console.warn(`Assistant run ${runStatus.status}`);
-      return null;
+    // 4. Better response handling with validation
+    if (runStatus.status === 'completed') {
+      const messages = await openai.beta.threads.messages.list(threadId, {
+        order: 'desc',
+        limit: 1,
+      });
+
+      if (messages.data.length === 0) {
+        console.warn('No messages returned from assistant');
+        return "";
+      }
+
+      const message = messages.data[0];
+
+      // Extract ONLY the text content, discarding all metadata and structure
+      if (message.role === 'assistant' && message.content && message.content.length > 0) {
+        console.log('Successfully retrieved assistant response');
+
+        // Extract only plain text from all text content parts
+        return message.content
+          .filter(item => item.type === 'text')
+          .map(item => item.text?.value || '')
+          .join('\n');  // Return string instead of the complex object
+      } else {
+        console.warn('Invalid message format from assistant');
+        return "";
+      }
+    } else {
+      console.warn(`Assistant run failed or timed out: ${runStatus.status}`);
+      return "";
     }
-
-    // Get response
-    const messages = await openai.beta.threads.messages.list(threadId, {
-      order: 'desc',
-      limit: 1,
-    });
-
-    return messages.data[0];
   } catch (error) {
+    // 6. Improved error logging
     console.error('Error searching files with assistant:', error);
     return null;
   }
