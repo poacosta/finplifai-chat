@@ -13,8 +13,6 @@ export const createAssetsAnalysisReport = ({ dataStream }: AssetsAnalysisReportI
     }),
     execute: async ({ fileUrl }) => {
       try {
-        console.log('fileUrl:', fileUrl);
-
         if (!fileUrl) {
           console.log('No file attached to this message');
         }
@@ -36,12 +34,7 @@ export const createAssetsAnalysisReport = ({ dataStream }: AssetsAnalysisReportI
         const data = await analysisResponse.json();
         const result = data['markdown_content'];
 
-        dataStream.writeData({
-          type: 'text-delta',
-          content: result,
-        });
-
-        return result;
+        return `__MARKDOWN_OUTPUT__\n${result}`;
       } catch (error) {
         console.error('Error fetching assets analysis info:', error);
         dataStream.writeData({
