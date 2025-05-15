@@ -19,20 +19,22 @@ export const createMetricsReport = ({ dataStream }: MetricsReportInfoProps) =>
         }
 
         const url = `${process.env.METRICS_REPORT_AGENT_API_URL}`;
+        const token = `Bearer ${process.env.METRICS_REPORT_AGENT_API_KEY || ''}`;
 
-        const analysisResponse = await fetch(url, {
+        const response = await fetch(url, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'Authorization': token,
           },
-          body: JSON.stringify({ url: fileUrl, employees: employee_number }),
+          body: JSON.stringify({ url: fileUrl, employees: parseInt(employee_number) }),
         });
 
-        if (!analysisResponse.ok) {
-          console.error('API request failed with status', analysisResponse.status);
+        if (!response.ok) {
+          console.error('API request failed with status', response.status);
         }
 
-        const data = await analysisResponse.json();
+        const data = await response.json();
         return data['metrics'];
       } catch (error) {
         console.error('Error fetching metrics report info:', error);
