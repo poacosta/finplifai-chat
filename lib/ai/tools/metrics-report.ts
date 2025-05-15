@@ -10,8 +10,9 @@ export const createMetricsReport = ({ dataStream }: MetricsReportInfoProps) =>
     description: 'Crea un reporte con las métricas de la empresa basado en un archivo',
     parameters: z.object({
       fileUrl: z.string().describe('URL del archivo que contiene la información para generar el reporte de métricas'),
+      employee_number: z.string().describe('Número de empleados en la empresa'),
     }),
-    execute: async ({ fileUrl }) => {
+    execute: async ({ fileUrl, employee_number }) => {
       try {
         if (!fileUrl) {
           console.log('No file attached to this message');
@@ -24,7 +25,7 @@ export const createMetricsReport = ({ dataStream }: MetricsReportInfoProps) =>
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ files: fileUrl }),
+          body: JSON.stringify({ url: fileUrl, employees: employee_number }),
         });
 
         if (!analysisResponse.ok) {
@@ -32,9 +33,7 @@ export const createMetricsReport = ({ dataStream }: MetricsReportInfoProps) =>
         }
 
         const data = await analysisResponse.json();
-        const result = data['markdown_content'];
-
-        return `__MARKDOWN_OUTPUT__\n${result}`;
+        return data['metrics'];
       } catch (error) {
         console.error('Error fetching metrics report info:', error);
         dataStream.writeData({
