@@ -11,6 +11,10 @@ import { updateDocument } from '@/lib/ai/tools/update-document';
 import { getLegalExpertInfo } from '@/lib/ai/tools/get-legal-expert-info';
 import { getRandomPic } from "@/lib/ai/tools/get-random-pic";
 import { createAssetsAnalysisReport } from "@/lib/ai/tools/assets-analysis-report";
+import { createMetricsReport } from "@/lib/ai/tools/metrics-report";
+import { createModel347 } from "@/lib/ai/tools/model-347";
+import { createModel303 } from "@/lib/ai/tools/model-303";
+import { createSubventionsReport } from "@/lib/ai/tools/subventions-report";
 import { createThreadForChat, searchFilesWithAssistant } from "@/lib/ai/assistants";
 import { SUPPORTED_FOR_FILE_SEARCH } from '@/app/(chat)/api/files/upload/route';
 
@@ -143,6 +147,10 @@ export async function POST(request: Request) {
                   'getRandomPic',
                   'getLegalExpertInfo',
                   'createAssetsAnalysisReport',
+                  'createMetricsReport',
+                  'createModel347',
+                  'createModel303',
+                  'createSubventionsReport',
                   'createDocument',
                   'updateDocument',
                 ],
@@ -151,6 +159,10 @@ export async function POST(request: Request) {
             tools: {
               getRandomPic,
               createAssetsAnalysisReport: createAssetsAnalysisReport({ dataStream }),
+              createMetricsReport: createMetricsReport({ dataStream }),
+              createModel347: createModel347({ dataStream }),
+              createModel303: createModel303({ dataStream }),
+              createSubventionsReport: createSubventionsReport({ dataStream }),
               getLegalExpertInfo: getLegalExpertInfo({ dataStream }),
               createDocument: createDocument({ session, dataStream }),
               updateDocument: updateDocument({ session, dataStream }),
