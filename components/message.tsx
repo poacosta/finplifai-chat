@@ -162,7 +162,7 @@ const PurePreviewMessage = ({
                       //   skeleton: ['getLegalExpertInfo'].includes(toolName),
                       // })}
                     >
-                      {toolName === 'getRandomPic' ? (
+                      {toolName === 'displayImage' ? (
                         <div className="flex">
                           <p className="text-base text-gray-500">Obteniendo la imagen...</p>
                           <Loader2 className="animate-spin text-gray-500 mt-1 mx-2" size={14}/>
@@ -172,7 +172,11 @@ const PurePreviewMessage = ({
                           <p className="text-base text-gray-500">Buscando en la fuente de datos...</p>
                           <Loader2 className="animate-spin text-gray-500 mt-1 mx-2" size={14}/>
                         </div>
-                      ) : toolName === 'createAssetsAnalysisReport' ? (
+                      ) : toolName === 'createAssetsAnalysisReport' || 
+                         toolName === 'createMetricsReport' || 
+                         toolName === 'createModel347' || 
+                         toolName === 'createModel303' || 
+                         toolName === 'createSubventionsReport' ? (
                         <div className="flex">
                           <p className="text-base text-gray-500">Consultando el agente...</p>
                           <Loader2 className="animate-spin text-gray-500 mt-1 mx-2" size={14}/>
@@ -195,7 +199,7 @@ const PurePreviewMessage = ({
 
                   return (
                     <div key={toolCallId}>
-                      {toolName === 'getRandomPic' ? (
+                      {toolName === 'displayImage' ? (
                           <div className="flex flex-col gap-2">
                             <Image
                               src={result as string}
@@ -211,6 +215,18 @@ const PurePreviewMessage = ({
                           ) :
                           toolName === 'createAssetsAnalysisReport' ? (
                             <p className="text-base text-gray-500">Creado por el agente de Análisis de Activos</p>
+                          ) : 
+                          toolName === 'createMetricsReport' ? (
+                            <p className="text-base text-gray-500">Creado por el agente de Métricas</p>
+                          ) :
+                          toolName === 'createModel347' ? (
+                            <p className="text-base text-gray-500">Modelo 347 generado</p>
+                          ) :
+                          toolName === 'createModel303' ? (
+                            <p className="text-base text-gray-500">Modelo 303 generado</p>
+                          ) :
+                          toolName === 'createSubventionsReport' ? (
+                            <p className="text-base text-gray-500">Listado de subvenciones generado</p>
                           ) : toolName === 'createDocument' ? (
                             <DocumentPreview
                               isReadonly={isReadonly}
@@ -252,9 +268,7 @@ export const PreviewMessage = memo(
     if (prevProps.isLoading !== nextProps.isLoading) return false;
     if (prevProps.message.id !== nextProps.message.id) return false;
     if (!equal(prevProps.message.parts, nextProps.message.parts)) return false;
-    if (!equal(prevProps.vote, nextProps.vote)) return false;
-
-    return true;
+    return equal(prevProps.vote, nextProps.vote);
   },
 );
 
