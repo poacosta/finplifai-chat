@@ -18,6 +18,15 @@ const nextConfig: NextConfig = {
       {
         hostname: 'images.unsplash.com'
       },
+      {
+        hostname: 'agentgraficas2.azurewebsites.net'
+      },
+      {
+        hostname: 'agent347-2.azurewebsites.net'
+      },
+      {
+        hostname: 'agent303try2.azurewebsites.net'
+      },
     ],
   },
 };
