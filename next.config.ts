@@ -27,6 +27,9 @@ const nextConfig: NextConfig = {
       {
         hostname: 'agent303try2.azurewebsites.net'
       },
+      {
+        hostname: 'agent347try2.blob.core.windows.net'
+      },
     ],
   },
 };
