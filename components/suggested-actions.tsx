@@ -13,9 +13,9 @@ interface SuggestedActionsProps {
 function PureSuggestedActions({ chatId, append }: SuggestedActionsProps) {
   const suggestedActions = [
     {
-      title: '¿Qué son',
-      label: 'las Normas de Contabilidad Españolas?',
-      action: '¿Qué son las Normas de Contabilidad Españolas (SAS)?',
+      title: '¡Hola!',
+      label: '¿me ayudas?',
+      action: 'Hola!',
     },
     {
       title: 'Escribe un código',
