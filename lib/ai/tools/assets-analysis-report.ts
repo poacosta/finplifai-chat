@@ -9,15 +9,19 @@ export const createAssetsAnalysisReport = ({ dataStream }: AssetsAnalysisReportI
   tool({
     description: 'Crea el análisis de activos y pasivos de la empresa basado en un archivo',
     parameters: z.object({
-      fileId: z.string().describe('ID del archivo a analizar')
+      fileUrl: z.string().describe('URL del archivo que contiene la información de activos y pasivos'),
     }),
-    execute: async ({ fileId }) => {
+    execute: async ({ fileUrl }) => {
       try {
-        const fileUrl = fileId.startsWith('http') ? fileId : `https://${process.env.VERCEL_BLOB_STORE_ID}.public.blob.vercel-storage.com/${fileId}`;
+        console.log('fileUrl:', fileUrl);
+
+        if (!fileUrl) {
+          console.log('No file attached to this message');
+        }
 
         const url = `${process.env.ASSETS_ANALYSIS_AGENT_API_URL}`;
 
-        const response = await fetch(url, {
+        const analysisResponse = await fetch(url, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -25,11 +29,11 @@ export const createAssetsAnalysisReport = ({ dataStream }: AssetsAnalysisReportI
           body: JSON.stringify({ files: fileUrl }),
         });
 
-        if (!response.ok) {
-          console.error('API request failed with status', response.status);
+        if (!analysisResponse.ok) {
+          console.error('API request failed with status', analysisResponse.status);
         }
 
-        const data = await response.json();
+        const data = await analysisResponse.json();
         const result = data['markdown_content'];
 
         dataStream.writeData({

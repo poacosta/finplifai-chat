@@ -18,7 +18,7 @@ const SUPPORTED_FILE_TYPES = [
   'application/vnd.ms-excel',
 ];
 
-const SUPPORTED_FOR_FILE_SEARCH = [
+export const SUPPORTED_FOR_FILE_SEARCH = [
   'application/pdf',
   'text/plain',
   'text/csv',
@@ -101,7 +101,6 @@ export async function POST(request: Request) {
           contentType: file.type,
           pathname: filename,
           documentId: generateUUID(),
-          vercelUrl: data.url,
           openaiFileId: openaiFileId,
         });
       }
@@ -112,7 +111,6 @@ export async function POST(request: Request) {
         contentType: file.type,
         pathname: filename,
         documentId: generateUUID(),
-        vercelUrl: data.url,
       });
     } catch (error) {
       console.error('Error during file upload:', error);

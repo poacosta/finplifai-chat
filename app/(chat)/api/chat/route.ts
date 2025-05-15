@@ -12,6 +12,7 @@ import { getLegalExpertInfo } from '@/lib/ai/tools/get-legal-expert-info';
 import { getRandomPic } from "@/lib/ai/tools/get-random-pic";
 import { createAssetsAnalysisReport } from "@/lib/ai/tools/assets-analysis-report";
 import { createThreadForChat, searchFilesWithAssistant } from "@/lib/ai/assistants";
+import { SUPPORTED_FOR_FILE_SEARCH } from '@/app/(chat)/api/files/upload/route';
 
 export const maxDuration = 60;
 
@@ -77,16 +78,25 @@ export async function POST(request: Request) {
       ],
     });
 
-    let documentContext = '';
+    let documentContext: string | null = null;
+
     if (chat?.threadId) {
-      try {
-        documentContext = await searchFilesWithAssistant(
-          chat.threadId,
-          userMessage.content
-        );
-      } catch (error) {
-        console.error('Error searching files:', error);
-        documentContext = '';
+      const hasSearchableAttachments = userMessage.experimental_attachments?.some(
+        attachment => attachment?.contentType ? SUPPORTED_FOR_FILE_SEARCH.includes(attachment.contentType) : false
+      );
+
+      if (hasSearchableAttachments) {
+        try {
+          documentContext = await searchFilesWithAssistant(
+            chat.threadId,
+            userMessage.content
+          );
+        } catch (error) {
+          console.error('Error searching files:', error);
+          documentContext = null;
+        }
+      } else {
+        console.log('No searchable attachments found in message');
       }
     }
 
@@ -94,10 +104,29 @@ export async function POST(request: Request) {
       ? `${systemPrompt()}\n\nCONTEXTO DE DOCUMENTOS:\n${documentContext}`
       : systemPrompt();
 
-    const messagesWithoutAttachments = messages.map((msg: any) => ({
-      ...msg,
-      experimental_attachments: undefined
-    }));
+    const messagesWithAttachmentInfo = messages.map((msg: any) => {
+      const attachments = msg.experimental_attachments || [];
+      let updatedContent = msg.content || "";
+
+      if (attachments.length > 0) {
+        const attachmentUrls = attachments.map((att: {
+            url: string;
+            name?: string;
+            contentType?: string;
+            documentId?: string
+          }) =>
+            `[Attachment: ${att.name || "file"} (${att.contentType || "unknown"}) - ${att.url}]`
+        ).join("\n");
+
+        updatedContent = `${updatedContent}\n\n${attachmentUrls}`;
+      }
+
+      return {
+        ...msg,
+        content: updatedContent,
+        experimental_attachments: undefined
+      };
+    });
 
     return createDataStreamResponse({
       execute: async (dataStream) => {
@@ -105,7 +134,7 @@ export async function POST(request: Request) {
           const result = streamText({
             model: myProvider.languageModel(selectedChatModel),
             system: enhancedSystemPrompt,
-            messages: messagesWithoutAttachments,
+            messages: messagesWithAttachmentInfo,
             maxSteps: 5,
             experimental_activeTools:
               selectedChatModel === 'chat-model-reasoning'
