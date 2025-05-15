@@ -25,7 +25,7 @@ export const PreviewAttachment = ({
       return <FileIcon className="size-6 text-red-500" />;
     } else if (contentType === 'text/plain') {
       return <FileTextIcon className="size-6 text-blue-500" />;
-    } else if (contentType === 'text/csv') {
+    } else if (contentType === 'text/csv' || contentType === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' || contentType === 'application/vnd.ms-excel') {
       return <TableIcon className="size-6 text-green-500" />;
     } else {
       return <FileIcon className="size-6 text-zinc-500" />;

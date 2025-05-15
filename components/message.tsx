@@ -172,6 +172,11 @@ const PurePreviewMessage = ({
                           <p className="text-base text-gray-500">Buscando en la fuente de datos...</p>
                           <Loader2 className="animate-spin text-gray-500 mt-1 mx-2" size={14}/>
                         </div>
+                      ) : toolName === 'createAssetsAnalysisReport' ? (
+                        <div className="flex">
+                          <p className="text-base text-gray-500">Consultando el agente...</p>
+                          <Loader2 className="animate-spin text-gray-500 mt-1 mx-2" size={14}/>
+                        </div>
                       ) : toolName === 'createDocument' ? (
                         <DocumentPreview isReadonly={isReadonly} args={args}/>
                       ) : toolName === 'updateDocument' ? (
@@ -202,21 +207,24 @@ const PurePreviewMessage = ({
                           </div>
                         ) :
                         toolName === 'getLegalExpertInfo' ? (
-                          <p className="text-base text-gray-500">Obtenido de la fuente de datos</p>
-                        ) : toolName === 'createDocument' ? (
-                          <DocumentPreview
-                            isReadonly={isReadonly}
-                            result={result}
-                          />
-                        ) : toolName === 'updateDocument' ? (
-                          <DocumentToolResult
-                            type="update"
-                            result={result}
-                            isReadonly={isReadonly}
-                          />
-                        ) : (
-                          <pre>{JSON.stringify(result, null, 2)}</pre>
-                        )}
+                            <p className="text-base text-gray-500">Obtenido de la fuente de datos</p>
+                          ) :
+                          toolName === 'createAssetsAnalysisReport' ? (
+                            <p className="text-base text-gray-500">Creado por el agente de Análisis de Activos</p>
+                          ) : toolName === 'createDocument' ? (
+                            <DocumentPreview
+                              isReadonly={isReadonly}
+                              result={result}
+                            />
+                          ) : toolName === 'updateDocument' ? (
+                            <DocumentToolResult
+                              type="update"
+                              result={result}
+                              isReadonly={isReadonly}
+                            />
+                          ) : (
+                            <pre>{JSON.stringify(result, null, 2)}</pre>
+                          )}
                     </div>
                   );
                 }

@@ -11,9 +11,17 @@ import { getChatById } from "@/lib/db/queries";
 const SUPPORTED_FILE_TYPES = [
   'image/jpeg',
   'image/png',
-  'application/pdf', // PDF files
-  'text/plain', // TXT files
-  'text/csv', // CSV files
+  'application/pdf',
+  'text/plain',
+  'text/csv',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.ms-excel',
+];
+
+export const SUPPORTED_FOR_FILE_SEARCH = [
+  'application/pdf',
+  'text/plain',
+  'text/csv',
 ];
 
 // Use Blob instead of File since File is not available in Node.js environment
@@ -21,10 +29,10 @@ const FileSchema = z.object({
   file: z
     .instanceof(Blob)
     .refine((file) => file.size <= 5 * 1024 * 1024, {
-      message: 'File size should be less than 5MB',
+      message: 'El tamaño del archivo no puede superar los 5MB',
     })
     .refine((file) => SUPPORTED_FILE_TYPES.includes(file.type), {
-      message: 'File type should be JPEG, PNG, PDF, TXT, or CSV',
+      message: 'Las extensiones permitidas son JPEG, PNG, PDF, TXT, XLS, XLSX or CSV',
     }),
 });
 
@@ -44,7 +52,7 @@ export async function POST(request: Request) {
     const file = formData.get('file') as Blob;
 
     if (!file) {
-      return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
+      return NextResponse.json({ error: 'No se ha podido subir el archivo' }, { status: 400 });
     }
 
     const validatedFile = FileSchema.safeParse({ file });
@@ -77,11 +85,25 @@ export async function POST(request: Request) {
       // Upload to Vercel Blob as you currently do
       const data = await put(`${filename}`, fileBuffer, { access: 'public' });
 
-      // Upload to OpenAI for Assistants API
-      const fileObj = new File([fileBuffer], filename, { type: file.type });
-      const openaiFileId = await uploadFile(fileObj);
+      // Check if the file type is supported for file search
+      const isFileSearchSupported = SUPPORTED_FOR_FILE_SEARCH.includes(file.type);
 
-      await attachFileToThread(threadId, openaiFileId);
+      if (isFileSearchSupported) {
+        // Upload to OpenAI for Assistants API
+        const fileObj = new File([fileBuffer], filename, { type: file.type });
+        const openaiFileId = await uploadFile(fileObj);
+
+        await attachFileToThread(threadId, openaiFileId);
+
+        return NextResponse.json({
+          ...data,
+          fileType: file.type,
+          contentType: file.type,
+          pathname: filename,
+          documentId: generateUUID(),
+          openaiFileId: openaiFileId,
+        });
+      }
 
       return NextResponse.json({
         ...data,
@@ -89,7 +111,6 @@ export async function POST(request: Request) {
         contentType: file.type,
         pathname: filename,
         documentId: generateUUID(),
-        openaiFileId: openaiFileId,
       });
     } catch (error) {
       console.error('Error during file upload:', error);
