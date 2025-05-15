@@ -30,6 +30,9 @@ const nextConfig: NextConfig = {
       {
         hostname: 'agent347try2.blob.core.windows.net'
       },
+      {
+        hostname: 'xfunhkigyquwi0rb.public.blob.vercel-storage.com'
+      }
     ],
   },
 };
