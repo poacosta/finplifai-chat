@@ -6,9 +6,7 @@ generation to provide accurate, contextually relevant financial guidance.
 
 ## Architecture Overview
 
-FinplifAI implements a sophisticated architecture with the following key components:
-
-![Editor _ Mermaid Chart-2025-05-01-075240](https://github.com/user-attachments/assets/0b169d4f-e47c-47b3-983c-ea7dc2c3e0f5)
+![architecture](https://github.com/user-attachments/assets/08d5ef3e-d1d4-43ee-96ec-cef8e45f3bcb)
 
 ### RAG System
 
