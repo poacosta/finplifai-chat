@@ -1,10 +1,12 @@
-# FinplifAI
+# FinplifAI • Chat
 
 FinplifAI is a RAG-based multiagent chat system designed to assist users with accounting and finance queries in
 accordance with Spanish state regulations. The platform leverages advanced language models and retrieval-augmented
 generation to provide accurate, contextually relevant financial guidance.
 
 ## Architecture Overview
+
+FinplifAI implements a sophisticated architecture with the following key components:
 
 ![architecture](https://github.com/user-attachments/assets/08d5ef3e-d1d4-43ee-96ec-cef8e45f3bcb)
 
