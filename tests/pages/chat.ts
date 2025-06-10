@@ -4,7 +4,8 @@ import { chatModels } from '@/lib/ai/models';
 import { expect, Page } from '@playwright/test';
 
 export class ChatPage {
-  constructor(private page: Page) {}
+  constructor(private page: Page) {
+  }
 
   public get sendButton() {
     return this.page.getByTestId('send-button');
@@ -35,14 +36,6 @@ export class ChatPage {
   async isGenerationComplete() {
     const response = await this.page.waitForResponse((response) =>
       response.url().includes('/api/chat'),
-    );
-
-    await response.finished();
-  }
-
-  async isVoteComplete() {
-    const response = await this.page.waitForResponse((response) =>
-      response.url().includes('/api/vote'),
     );
 
     await response.finished();
@@ -89,8 +82,7 @@ export class ChatPage {
   }
 
   public async getSelectedModel() {
-    const modelId = await this.page.getByTestId('model-selector').innerText();
-    return modelId;
+    return await this.page.getByTestId('model-selector').innerText();
   }
 
   public async chooseModelFromSelector(chatModelId: string) {
@@ -124,8 +116,8 @@ export class ChatPage {
       .then(async (visible) =>
         visible
           ? await lastMessageElement
-              .getByTestId('message-reasoning')
-              .innerText()
+            .getByTestId('message-reasoning')
+            .innerText()
           : null,
       )
       .catch(() => null);
