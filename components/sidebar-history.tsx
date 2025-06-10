@@ -73,7 +73,7 @@ const PureChatItem = ({
             className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground mr-0.5"
             showOnHover={!isActive}
           >
-            <MoreHorizontalIcon />
+            <MoreHorizontalIcon/>
             <span className="sr-only">Más</span>
           </SidebarMenuAction>
         </DropdownMenuTrigger>
@@ -83,7 +83,7 @@ const PureChatItem = ({
             className="cursor-pointer text-destructive focus:bg-destructive/15 focus:text-destructive dark:text-red-500"
             onSelect={() => onDelete(chat.id)}
           >
-            <TrashIcon />
+            <TrashIcon/>
             <span>Eliminar</span>
           </DropdownMenuItem>
         </DropdownMenuContent>
@@ -117,26 +117,33 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const router = useRouter();
   const handleDelete = async () => {
+    setShowDeleteDialog(false);
+
     const deletePromise = fetch(`/api/chat?id=${deleteId}`, {
       method: 'DELETE',
+    }).then(async (response) => {
+      if (!response.ok) {
+        throw new Error('Failed to delete chat');
+      }
+
+      mutate((history) => {
+        if (history) {
+          return history.filter((h) => h.id !== deleteId);
+        }
+        return history;
+      }, false);
+
+      await new Promise(resolve => setTimeout(resolve, 200));
+      window.location.href = '/';
+
+      return response;
     });
 
     toast.promise(deletePromise, {
       loading: 'Eliminando chat...',
-      success: () => {
-        mutate((history) => {
-          if (history) {
-            return history.filter((h) => h.id !== id);
-          }
-        });
-        return 'Chat eliminado satisfactoriamente';
-      },
+      success: 'Chat eliminado satisfactoriamente',
       error: 'Fallo al eliminar el chat',
     });
-
-    setShowDeleteDialog(false);
-
-    router.push('/');
   };
 
   if (!user) {
@@ -259,7 +266,7 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
                     {groupedChats.yesterday.length > 0 && (
                       <>
                         <div className="px-2 py-1 text-xs text-sidebar-foreground/50 mt-6">
-                          Yesterday
+                          Ayer
                         </div>
                         {groupedChats.yesterday.map((chat) => (
                           <ChatItem
@@ -279,7 +286,7 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
                     {groupedChats.lastWeek.length > 0 && (
                       <>
                         <div className="px-2 py-1 text-xs text-sidebar-foreground/50 mt-6">
-                          Last 7 days
+                          Últimos 7 días
                         </div>
                         {groupedChats.lastWeek.map((chat) => (
                           <ChatItem
@@ -299,7 +306,7 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
                     {groupedChats.lastMonth.length > 0 && (
                       <>
                         <div className="px-2 py-1 text-xs text-sidebar-foreground/50 mt-6">
-                          Last 30 days
+                          Últimos 30 días
                         </div>
                         {groupedChats.lastMonth.map((chat) => (
                           <ChatItem
@@ -319,7 +326,7 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
                     {groupedChats.older.length > 0 && (
                       <>
                         <div className="px-2 py-1 text-xs text-sidebar-foreground/50 mt-6">
-                          Older
+                          Antiguos
                         </div>
                         {groupedChats.older.map((chat) => (
                           <ChatItem
@@ -346,7 +353,7 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
           <AlertDialogHeader>
             <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
             <AlertDialogDescription>
-                Esta acción no se puede deshacer. Esto eliminará permanentemente tu chat.
+              Esta acción no se puede deshacer. Esto eliminará permanentemente tu chat.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
