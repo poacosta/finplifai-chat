@@ -61,7 +61,7 @@ export function MessageEditor({
             setMode('view');
           }}
         >
-          Cancel
+          Cancelar
         </Button>
         <Button
           data-testid="message-editor-send-button"
@@ -96,7 +96,7 @@ export function MessageEditor({
             reload();
           }}
         >
-          {isSubmitting ? 'Sending...' : 'Send'}
+          {isSubmitting ? 'Enviando...' : 'Enviar'}
         </Button>
       </div>
     </div>
