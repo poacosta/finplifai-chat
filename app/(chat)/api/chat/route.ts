@@ -83,30 +83,39 @@ export async function POST(request: Request) {
     });
 
     let documentContext: string | null = null;
+    let chatContext: string | null = null;
 
     if (chat?.threadId) {
       const hasSearchableAttachments = userMessage.experimental_attachments?.some(
         attachment => attachment?.contentType ? SUPPORTED_FOR_FILE_SEARCH.includes(attachment.contentType) : false
       );
 
-      if (hasSearchableAttachments) {
-        try {
+      try {
+        if (hasSearchableAttachments) {
           documentContext = await searchFilesWithAssistant(
             chat.threadId,
             userMessage.content
           );
-        } catch (error) {
-          console.error('Error searching files:', error);
-          documentContext = null;
+          console.log('Contexto de documentos obtenido correctamente');
+        } else {
+          chatContext = await searchFilesWithAssistant(
+            chat.threadId,
+            userMessage.content
+          );
+          console.log('Mensaje procesado por el asistente para contexto de chat');
         }
-      } else {
-        console.log('No searchable attachments found in message');
+      } catch (error) {
+        console.error('Error al procesar mensaje con el asistente:', error);
+        documentContext = null;
+        chatContext = null;
       }
     }
 
     const enhancedSystemPrompt = documentContext
       ? `${systemPrompt()}\n\nCONTEXTO DE DOCUMENTOS:\n${documentContext}`
-      : systemPrompt();
+      : chatContext
+        ? `${systemPrompt()}\n\nCONTEXTO DE CHAT:\n${chatContext}`
+        : systemPrompt();
 
     const messagesWithAttachmentInfo = messages.map((msg: any) => {
       const attachments = msg.experimental_attachments || [];
